@@ -23,17 +23,23 @@
     </div>
     <br>
     
-    <div class="countriesFrom">
-      <CountriesForm v-if="addCountryForm" :formType=1 :key=0>
-        <template v-slot:title>Šalies pridėjimas</template>
-        <template v-slot:buttonText>Pridėti</template>
-      </CountriesForm>
-      
-      <CountriesForm v-if="editCountryForm" :formType=2 :countryInfo="this.country" :key="country.id">
-        <template v-slot:title>Šalies redagavimas</template>
-        <template v-slot:buttonText>Redaguoti</template>
-      </CountriesForm>
-    </div>  
+    <AddEditForm v-if="showModal&&addCountryForm" @close="showModal = false" @formResults="addCountry" :formType=1 :mode=0 :key=0>
+      <template v-slot:title>Šalies pridėjimas</template>
+      <template v-slot:input1>Pavadinimas:</template>
+      <template v-slot:input2>Užimamas plotas:</template>
+      <template v-slot:input3>Gyventojų skaičius:</template>
+      <template v-slot:input4>Šalies tel. kodas:</template>
+      <template v-slot:buttonText>Pridėti</template>
+    </AddEditForm>
+
+    <AddEditForm v-if="showModal&&editCountryForm" @close="showModal = false" @formResults="editCountry" :formType=2 :countryInfo="this.country" :mode=0 :key="country.id">
+      <template v-slot:title>Šalies redagavimas</template>
+      <template v-slot:input1>Pavadinimas:</template>
+      <template v-slot:input2>Užimamas plotas:</template>
+      <template v-slot:input3>Gyventojų skaičius:</template>
+      <template v-slot:input4>Šalies tel. kodas:</template>
+      <template v-slot:buttonText>Redaguoti</template>
+    </AddEditForm>
 
     <div v-if="countries.length">
       <table>
@@ -67,12 +73,12 @@
 <script>
 
 import CountriesService from "../services/CountriesService";
-import CountriesForm from "../components/CountriesForm.vue";
+import AddEditForm from "../components/AddEditForm.vue";
 
 export default {
   name: 'Countries',
   components: {
-    CountriesForm
+    AddEditForm
   },
 
   data() {
@@ -89,7 +95,8 @@ export default {
       temp2: 0,
       country: [],
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      showModal: false
     }
   },
 
@@ -123,9 +130,7 @@ export default {
     addCountryButton() {
       this.addCountryForm = !this.addCountryForm;
       this.editCountryForm = false;
-      if (this.addCountryForm) {
-        document.querySelector(".countriesFrom").scrollIntoView();
-      }
+      this.showModal = true;
     },
 
     deleteCountry(value) {
@@ -152,7 +157,7 @@ export default {
       this.country = this.countries.find(c1 => c1.id === value);
       this.editCountryForm = true;
       this.addCountryForm = false;
-      document.querySelector(".countriesFrom").scrollIntoView();
+      this.showModal = true;
     },
 
     searchCountries() {
@@ -168,7 +173,6 @@ export default {
       else {
         console.log("Neįvesta");
       }
-      //this.searchInput = '';
     },
 
     sortCountries() {
@@ -189,6 +193,71 @@ export default {
             console.log(error);
             alert("Klaida su filtravimu");
       });
+    },
+
+    addCountry(results) {
+      console.log('Add city');
+      console.log(results);
+      let that = this;
+      CountriesService.add({
+          data: {
+            attributes: {
+                name: results.name,
+                area: results.area,
+                population: results.population,
+                phone_code: results.phone_code
+            }
+          }
+      })
+      .then(function (response) {
+          console.log(response.data);
+          console.log("Pridėta");
+          alert("Pridėtas " + results.name);
+          that.$router.go(0);
+      })
+      .catch(function (error) {
+          console.log(error);
+          that.errorAlert(error,'pridėti');
+      });
+    },
+
+    editCountry(results) {
+      console.log('Edit city');
+      let that = this;
+      CountriesService.update(this.country.id, {
+        data: {
+          attributes: {
+            name: results.name,
+            area: results.area,
+            population: results.population,
+            phone_code: results.phone_code
+          }
+        }
+      })
+      .then(function (response) {
+        console.log(response.data);
+        console.log("Atnaujintas");
+        alert("Atnaujintas " + results.name);
+        that.$router.go(0);
+      })
+      .catch(function (error) {
+        console.log(error);
+        that.errorAlert(error,'atnaujinti');
+      });
+    },
+
+    errorAlert(error, name) {
+      var text = "";
+      if (error.response.data.errors["data.attributes.name"])
+        text += "* įvestas netinkamas pavadinimas\n";
+      if (error.response.data.errors["data.attributes.area"])
+        text += "* įvestas netinkamas užimamas plotas\n";
+      if (error.response.data.errors["data.attributes.population"])
+        text += "* įvestas netinkamas gyventojų skaičius\n";
+      if (error.response.data.errors["data.attributes.phone_code"])
+        text += "* įvestas netinkamas šalies tel. kodas\n";
+      
+      alert("Nepavyko " + name + " šalies:\n" + text);
     }
     
   }

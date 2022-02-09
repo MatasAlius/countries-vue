@@ -10,20 +10,8 @@ class CitiesService {
     return http.get(`/countries/${id}/cities?page=${page}&start_date=${start_date}&end_date=${end_date}&search=${search}`);
   }
 
-  getPage(id, page) {
-    return http.get(`/countries/${id}/cities?page=${page}`);
-  }
-
-  getByDate(id, start_date, end_date) {
-    return http.get(`/countries/${id}/cities?start_date=${start_date}&end_date=${end_date}`);
-  }
-
   delete(id, id2) {
     return http.delete(`/countries/${id}/cities/${id2}`);
-  }
-
-  search(id, search) {
-      return http.get(`/countries/${id}/cities?search=${search}`);
   }
 
   add(id, data) {

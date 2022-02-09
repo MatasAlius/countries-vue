@@ -22,18 +22,24 @@
       </form>
     </div>
     <br>
-  
-    <div class="citiesForm">
-      <CitiesForm v-if="addCityForm" :formType=1 :key=0>
-        <template v-slot:title>Miesto pridėjimas</template>
-        <template v-slot:buttonText>Pridėti</template>
-      </CitiesForm>
-      
-      <CitiesForm v-if="editCityForm" :formType=2 :cityInfo="this.city" :key="city.id">
-        <template v-slot:title>Miesto redagavimas</template>
-        <template v-slot:buttonText>Redaguoti</template>
-      </CitiesForm>
-    </div>
+    
+    <AddEditForm v-if="showModal&&addCityForm" @close="showModal = false" @formResults="addCity" :formType=1 :mode=1 :key=0>
+      <template v-slot:title>Miesto pridėjimas</template>
+      <template v-slot:input1>Pavadinimas:</template>
+      <template v-slot:input2>Užimamas plotas:</template>
+      <template v-slot:input3>Gyventojų skaičius:</template>
+      <template v-slot:input4>Miesto pašto kodas:</template>
+      <template v-slot:buttonText>Pridėti</template>
+    </AddEditForm>
+
+    <AddEditForm v-if="showModal&&editCityForm" @close="showModal = false" @formResults="editCity" :formType=2 :cityInfo="this.city" :mode=1 :key="city.id">
+      <template v-slot:title>Miesto redagavimas</template>
+      <template v-slot:input1>Pavadinimas:</template>
+      <template v-slot:input2>Užimamas plotas:</template>
+      <template v-slot:input3>Gyventojų skaičius:</template>
+      <template v-slot:input4>Miesto pašto kodas:</template>
+      <template v-slot:buttonText>Redaguoti</template>
+    </AddEditForm>
 
     <div v-if="cities.length">
       <table>
@@ -68,12 +74,12 @@
 
 import CountriesService from "../services/CountriesService";
 import CitiesService from "../services/CitiesService";
-import CitiesForm from "../components/CitiesForm.vue";
+import AddEditForm from "./AddEditForm.vue";
 
 export default {
   name: 'Cities',
   components: {
-    CitiesForm
+    AddEditForm
   },
 
   data() {
@@ -92,7 +98,8 @@ export default {
       temp2: 0,
       city: [],
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      showModal: false
     }
   },
   created() {
@@ -129,9 +136,7 @@ export default {
     addCityButton() {
       this.addCityForm = !this.addCityForm;
       this.editCityForm = false;
-      if (this.addCityForm) {
-        document.querySelector(".citiesForm").scrollIntoView();
-      }
+      this.showModal = true;
     },
 
     deleteCity(value) {
@@ -158,7 +163,7 @@ export default {
       this.city = this.cities.find(c1 => c1.id === this.temp);
       this.editCityForm = true;
       this.addCityForm = false;
-      document.querySelector(".citiesForm").scrollIntoView();
+      this.showModal = true;
     },
 
     searchCities() {
@@ -174,7 +179,6 @@ export default {
       else {
         console.log("Neįvesta");
       }
-      //this.searchInput = '';
     },
 
     sortCities() {
@@ -195,6 +199,71 @@ export default {
             console.log(error);
             alert("Klaida su filtravimu");
       });
+    },
+
+    addCity(results) {
+      console.log('Add city');
+      console.log(results);
+      let that = this;
+      CitiesService.add(this.$route.params.id, {
+          data: {
+            attributes: {
+                name: results.name,
+                area: results.area,
+                population: results.population,
+                postal_code: results.postal_code
+            }
+          }
+      })
+      .then(function (response) {
+          console.log(response.data);
+          console.log("Pridėta");
+          alert("Pridėtas " + results.name);
+          that.$router.go(0);
+      })
+      .catch(function (error) {
+          console.log(error);
+          that.errorAlert(error,'pridėti');
+      });
+    },
+
+    editCity(results) {
+      console.log('Edit city');
+      let that = this;
+      CitiesService.update(this.$route.params.id, this.city.id, {
+        data: {
+          attributes: {
+            name: results.name,
+            area: results.area,
+            population: results.population,
+            postal_code: results.postal_code
+          }
+        }
+      })
+      .then(function (response) {
+        console.log(response.data);
+        console.log("Atnaujintas");
+        alert("Atnaujintas " + results.name);
+        that.$router.go(0);
+      })
+      .catch(function (error) {
+        console.log(error);
+        that.errorAlert(error,'atnaujinti');
+      });
+    },
+
+    errorAlert(error, name) {
+      var text = "";
+      if (error.response.data.errors["data.attributes.name"])
+        text += "* įvestas netinkamas pavadinimas\n";
+      if (error.response.data.errors["data.attributes.area"])
+        text += "* įvestas netinkamas užimamas plotas\n";
+      if (error.response.data.errors["data.attributes.population"])
+        text += "* įvestas netinkamas gyventojų skaičius\n";
+      if (error.response.data.errors["data.attributes.postal_code"])
+        text += "* įvestas netinkamas pašto kodas\n";
+      
+      alert("Nepavyko " + name + " miesto:\n" + text);
     }
   }
 }
